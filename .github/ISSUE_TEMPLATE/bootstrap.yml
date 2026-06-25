@@ -1,0 +1,61 @@
+name: "🚀 Bootstrap — New Project or Feature"
+description: "Describe a new application, major feature, or project. The AI Planner will generate a full architecture and issue breakdown."
+title: "[Bootstrap] "
+labels:
+  - "bootstrap"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## How this works
+        After you submit this issue, apply the **`bootstrap`** label to trigger the AI Planner Agent.
+        The Planner will generate an architecture overview and a set of `draft` issues.
+        You review the draft issues and apply `ready` to any you want implemented.
+
+        **Nothing executes automatically from this template — you control the trigger.**
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "What do you want to build?"
+      description: "Describe the application or feature. Be as specific as possible — the AI will use this to generate the full development plan."
+      placeholder: |
+        I need a REST API for managing tasks. The system should:
+        - Allow users to create, read, update, and delete tasks
+        - Support user authentication with JWT
+        - Include filtering, sorting, and pagination
+        - Be built with Node.js / Express and PostgreSQL
+        - Have unit and integration tests
+    validations:
+      required: true
+
+  - type: textarea
+    id: tech_stack
+    attributes:
+      label: "Technology preferences (optional)"
+      description: "Specify any languages, frameworks, or tools you want to use. Leave blank to let the AI choose."
+      placeholder: |
+        - Language: TypeScript
+        - Framework: Express.js
+        - Database: PostgreSQL with Prisma
+        - Testing: Jest
+
+  - type: textarea
+    id: constraints
+    attributes:
+      label: "Constraints and non-goals (optional)"
+      description: "What should NOT be included? Any performance, scale, or compliance requirements?"
+      placeholder: |
+        - No GraphQL (REST only)
+        - Must handle 1000 concurrent users
+        - GDPR compliant (EU data residency)
+
+  - type: checkboxes
+    id: acknowledgement
+    attributes:
+      label: Acknowledgements
+      options:
+        - label: "I understand that the AI Planner will create `draft` issues but will NOT start development automatically"
+          required: true
+        - label: "I will review each generated issue and manually apply the `ready` label to approved ones"
+          required: true

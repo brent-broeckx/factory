@@ -1,0 +1,45 @@
+name: "🐛 Bug Report"
+description: "Report a bug. The Developer Agent will investigate and fix it."
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: "Bug description"
+      description: "What is the unexpected behaviour?"
+      placeholder: "When creating a task with a due date in the past, the API returns 500 instead of 400."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Steps to reproduce"
+      placeholder: |
+        1. POST /api/tasks with body: { "title": "Test", "dueDate": "2020-01-01" }
+        2. Observe 500 Internal Server Error response
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Expected behaviour"
+      placeholder: "Should return 400 Bad Request with a message explaining that due date cannot be in the past."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: "Actual behaviour"
+      placeholder: "Returns 500 Internal Server Error with a stack trace."
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: "Environment / additional context (optional)"
+      placeholder: "Node.js 20.x, happens only in production, started after v1.2.0 release"

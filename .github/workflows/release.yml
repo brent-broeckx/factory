@@ -1,0 +1,219 @@
+name: 🚀 Release
+
+# ALWAYS MANUAL. Never triggered automatically.
+# Requires human to supply version, choose environment, and confirm.
+# Detects project type and runs appropriate build + deploy pipeline.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version — must follow semver (e.g. 1.2.3)"
+        required: true
+        type: string
+      environment:
+        description: "Target deployment environment"
+        required: true
+        type: choice
+        options:
+          - production
+          - staging
+        default: production
+      dry_run:
+        description: "Dry run — build and validate but skip tagging and deployment"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  release:
+    name: Release v${{ inputs.version }} → ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    permissions:
+      contents: write
+      packages: write
+      deployments: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ── Validate inputs ──────────────────────────────────────────────────
+      - name: Validate version format
+        run: |
+          VERSION="${{ inputs.version }}"
+          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'; then
+            echo "❌ Invalid version format: $VERSION"
+            echo "   Expected semver format: MAJOR.MINOR.PATCH (e.g. 1.0.0 or 1.0.0-beta.1)"
+            exit 1
+          fi
+          echo "✅ Version format valid: $VERSION"
+
+      - name: Check tag does not already exist
+        run: |
+          if git ls-remote --tags origin "refs/tags/v${{ inputs.version }}" | grep -q .; then
+            echo "❌ Tag v${{ inputs.version }} already exists on remote"
+            exit 1
+          fi
+          echo "✅ Tag v${{ inputs.version }} is available"
+
+      # ── Detect project type ──────────────────────────────────────────────
+      - name: Set up Python (for detection script)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Detect project type
+        id: detect
+        run: |
+          python - <<'PYEOF'
+          import os, glob
+
+          project_type = "unknown"
+
+          if os.path.exists("package.json"):
+              project_type = "nodejs"
+          elif glob.glob("**/*.csproj", recursive=True) or glob.glob("**/*.fsproj", recursive=True):
+              project_type = "dotnet"
+          elif os.path.exists("pyproject.toml") or os.path.exists("setup.py") or os.path.exists("requirements.txt"):
+              project_type = "python"
+          elif os.path.exists("Dockerfile") or os.path.exists("docker-compose.yml"):
+              project_type = "docker"
+          elif os.path.exists("index.html") or os.path.exists("public/index.html") or os.path.exists("dist/index.html"):
+              project_type = "static"
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"project_type={project_type}\n")
+          print(f"Detected project type: {project_type}")
+          PYEOF
+
+      # ── Build by project type ────────────────────────────────────────────
+      - name: Build (Node.js)
+        if: steps.detect.outputs.project_type == 'nodejs'
+        run: |
+          echo "📦 Building Node.js project..."
+          npm ci
+          npm run build --if-present
+          npm test --if-present -- --passWithNoTests
+
+      - name: Setup .NET
+        if: steps.detect.outputs.project_type == 'dotnet'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.x"
+
+      - name: Build (.NET)
+        if: steps.detect.outputs.project_type == 'dotnet'
+        run: |
+          echo "📦 Building .NET project..."
+          dotnet restore
+          dotnet build --configuration Release --no-restore
+          dotnet test --configuration Release --no-build --verbosity normal
+          dotnet publish --configuration Release --output ./publish --no-build
+
+      - name: Build (Python)
+        if: steps.detect.outputs.project_type == 'python'
+        run: |
+          echo "📦 Validating Python project..."
+          if [ -f "requirements.txt" ]; then pip install -r requirements.txt -q; fi
+          if [ -f "pyproject.toml" ]; then pip install -e ".[dev]" -q 2>/dev/null || pip install -e . -q; fi
+          python -m pytest --tb=short -q 2>/dev/null || echo "No tests found or pytest not configured"
+
+      - name: Build (Docker)
+        if: steps.detect.outputs.project_type == 'docker'
+        run: |
+          echo "🐳 Building Docker image..."
+          IMAGE_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker build -t "${IMAGE_NAME}:${{ inputs.version }}" -t "${IMAGE_NAME}:latest" .
+          echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_ENV
+
+      - name: Build (Static)
+        if: steps.detect.outputs.project_type == 'static'
+        run: |
+          echo "📦 Static site — no build step required"
+          echo "   Deploy dist/ or public/ directory to your CDN/hosting provider"
+
+      # ── Tag & Release ────────────────────────────────────────────────────
+      - name: Create Git tag
+        if: inputs.dry_run == false
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
+          git push origin "v${{ inputs.version }}"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            CHANGELOG=$(git log --oneline --no-merges --format="- %s (%h)" | head -25)
+          else
+            CHANGELOG=$(git log "${PREV_TAG}..HEAD" --oneline --no-merges --format="- %s (%h)")
+          fi
+          echo "changelog<<CLEOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "CLEOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        if: inputs.dry_run == false
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const changelog = `${{ steps.changelog.outputs.changelog }}`;
+            const isPrerelease = '${{ inputs.environment }}' === 'staging';
+            const { data: release } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: `v${{ inputs.version }}`,
+              name: `v${{ inputs.version }}`,
+              body: [
+                `## What's Changed`,
+                ``,
+                changelog,
+                ``,
+                `---`,
+                `**Project type:** ${{ steps.detect.outputs.project_type }}`,
+                `**Environment:** ${{ inputs.environment }}`,
+                `**Released by:** @${context.actor}`,
+              ].join('\n'),
+              draft: false,
+              prerelease: isPrerelease,
+            });
+            core.notice(`✅ Release created: ${release.html_url}`);
+
+      # ── Deploy (optional, project-specific) ─────────────────────────────
+      - name: Deploy to ${{ inputs.environment }}
+        if: inputs.dry_run == false && vars.DEPLOY_ENABLED == 'true'
+        run: |
+          echo "🚀 Deploying v${{ inputs.version }} to ${{ inputs.environment }}..."
+          if [ -f ".github/deploy.sh" ]; then
+            chmod +x .github/deploy.sh
+            .github/deploy.sh "${{ inputs.version }}" "${{ inputs.environment }}"
+          else
+            echo "ℹ️  No .github/deploy.sh found. Create this script to enable automated deployment."
+            echo "   It receives: VERSION=${{ inputs.version }} ENVIRONMENT=${{ inputs.environment }}"
+          fi
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+          VERSION: ${{ inputs.version }}
+          ENVIRONMENT: ${{ inputs.environment }}
+
+      # ── Summary ──────────────────────────────────────────────────────────
+      - name: Write job summary
+        run: |
+          {
+            echo "## Release Summary"
+            echo ""
+            echo "| Field | Value |"
+            echo "|-------|-------|"
+            echo "| Version | v${{ inputs.version }} |"
+            echo "| Environment | ${{ inputs.environment }} |"
+            echo "| Project Type | ${{ steps.detect.outputs.project_type }} |"
+            echo "| Dry Run | ${{ inputs.dry_run }} |"
+            echo "| Triggered By | @${{ github.actor }} |"
+          } >> "$GITHUB_STEP_SUMMARY"

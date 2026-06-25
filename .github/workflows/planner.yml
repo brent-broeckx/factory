@@ -1,0 +1,49 @@
+name: 🧠 Planner Agent
+
+# Triggered ONLY when the 'bootstrap' label is applied to an issue.
+# Nothing runs automatically — this is the first human-gated entry point.
+
+on:
+  issues:
+    types: [labeled]
+
+concurrency:
+  group: planner-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Generate Architecture & Issues from Bootstrap
+    # Hard gate: only run when the exact label 'bootstrap' is applied
+    if: github.event.label.name == 'bootstrap'
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: "agents/planner/requirements.txt"
+
+      - name: Install agent dependencies
+        run: pip install -r agents/planner/requirements.txt
+
+      - name: Run Planner Agent
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          # Override these via repository Variables (Settings → Variables):
+          AI_MODEL: ${{ vars.AI_MODEL || 'gpt-4o' }}
+          AI_BASE_URL: ${{ vars.AI_BASE_URL || 'https://api.openai.com/v1' }}
+          AI_MAX_TOKENS: ${{ vars.AI_MAX_TOKENS || '4096' }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPO_FULL_NAME: ${{ github.repository }}
+        run: python agents/planner/agent.py

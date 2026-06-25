@@ -1,0 +1,75 @@
+# Project Configuration
+# ======================
+# Describes your project to the AI Developer Agent.
+# The developer agent reads this file as context when implementing issues.
+# Fill this in after creating your repository from the template.
+
+project:
+  # Short description of what this project is
+  name: "My Project"
+  description: "Describe your project here. This is read by the AI Developer Agent."
+
+  # Primary programming language(s)
+  # Examples: TypeScript, Python, C#, Go, Java, Ruby
+  language: ""
+
+  # Framework(s) in use
+  # Examples: Express, FastAPI, ASP.NET Core, Next.js, Django
+  framework: ""
+
+  # Detected automatically by the release workflow, but set here for dev agent context
+  # Options: nodejs, dotnet, python, docker, static, unknown
+  type: ""
+
+code_style:
+  # Point the developer agent to style rules
+  # Examples: eslint, prettier, black, ruff, dotnet format
+  formatter: ""
+  linter: ""
+
+  # Key conventions to follow (add your own)
+  conventions:
+    - "Use async/await, not callbacks"
+    - "All functions must have explicit return types"
+    - "Tests use describe/it blocks"
+    # - "Follow repository naming conventions in CONTRIBUTING.md"
+
+testing:
+  # Test framework(s) in use
+  # Examples: Jest, Pytest, xUnit, RSpec, Vitest
+  framework: ""
+
+  # Test file location pattern
+  # Examples: "**/*.test.ts", "tests/", "spec/"
+  pattern: ""
+
+  # Minimum coverage threshold (developer agent will aim for this)
+  min_coverage_percent: 80
+
+structure:
+  # Root directory for source code
+  src_dir: "src"
+
+  # Root directory for tests
+  test_dir: "tests"
+
+  # Any directories the developer agent should NOT modify
+  protected_paths:
+    - ".github/"
+    - "agents/"
+    - "prompts/"
+    - "config/"
+    - "docs/"
+
+deployment:
+  # Set to true after configuring .github/deploy.sh
+  enabled: false
+
+  # Available environments (used in release workflow)
+  environments:
+    - name: production
+    - name: staging
+
+  # Custom deployment notes for the AI developer agent
+  # e.g. "Deploy by pushing to the 'deploy' branch"
+  notes: ""

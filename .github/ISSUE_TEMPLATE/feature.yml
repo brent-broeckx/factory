@@ -1,0 +1,41 @@
+name: "✨ Feature Request"
+description: "Request a new feature. Once submitted, the Developer Agent will automatically pick this up."
+title: "[Feature] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Direct development path
+        Issues created from this template are automatically labeled **`ready`** and will
+        be picked up by the AI Developer Agent without requiring a bootstrap planning step.
+
+        Use this template for individual, well-scoped features. For large projects or
+        multi-feature initiatives, use the **Bootstrap** template instead.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Feature description"
+      description: "What do you want to add? Be specific — the AI developer will implement this directly."
+      placeholder: "Add a rate limiting middleware that allows 100 requests per minute per IP address."
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: "Acceptance criteria"
+      description: "How do you know this is done? List specific, testable criteria."
+      placeholder: |
+        - [ ] Rate limiting returns HTTP 429 when limit is exceeded
+        - [ ] Headers X-RateLimit-Limit and X-RateLimit-Remaining are set on all responses
+        - [ ] Limit is configurable via environment variable RATE_LIMIT_PER_MINUTE
+        - [ ] Unit tests cover the rate limiter logic
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: "Additional context (optional)"
+      description: "Any technical notes, links to relevant code, or design decisions."
