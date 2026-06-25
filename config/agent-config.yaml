@@ -27,6 +27,11 @@ cost_control:
   # Override: MAX_FIX_ITERATIONS variable
   max_fix_iterations: 3
 
+  # Maximum tool calls (search_files + read_file + list_directory + write_implementation)
+  # the Developer Agent may make per run. Prevents runaway file-reading costs.
+  # Override: MAX_TOOL_CALLS variable
+  max_tool_calls: 20
+
   # Maximum number of files included in a diff for reviewer/QA/security analysis.
   # Files beyond this limit are skipped (with a note in the comment).
   max_files_per_review: 20

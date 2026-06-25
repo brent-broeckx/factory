@@ -69,4 +69,6 @@ jobs:
           REPO_FULL_NAME: ${{ github.repository }}
           # Cost control: max automated fix attempts before requiring human
           MAX_FIX_ITERATIONS: ${{ vars.MAX_FIX_ITERATIONS || '3' }}
+          # Cost control: max tool calls per agent run (search + read + write)
+          MAX_TOOL_CALLS: ${{ vars.MAX_TOOL_CALLS || '20' }}
         run: python agents/developer/agent.py
