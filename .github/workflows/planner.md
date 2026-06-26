@@ -2,8 +2,6 @@
 name: 🧠 Planner — Decompose bootstrap issue into sub-issues
 description: Reads a bootstrap issue and creates a set of independently implementable development sub-issues.
 on:
-  issues:
-    types: [labeled]
   workflow_dispatch:
     inputs:
       issue_number:
