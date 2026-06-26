@@ -1,64 +1,22 @@
-name: 🔧 Auto Setup — Configure repo after template creation
+name: 🔧 Auto Setup — Create labels
 
-# Triggers when the repo is first created from the template.
-# Also manually runnable if something needs to be re-applied.
+# Runs once when the repo is created from the template, or manually via workflow_dispatch.
 on:
   create:
   workflow_dispatch:
 
 jobs:
   setup:
-    # Only run on the default branch, and only once (on repo creation the
-    # 'create' event fires for the default branch being initialised).
+    # Only run on the default branch to avoid firing on every new branch.
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'create' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch))
     runs-on: ubuntu-latest
 
-    # GITHUB_TOKEN needs these scopes for everything we configure below.
     permissions:
-      contents: write
       issues: write
-      pull-requests: write
-      actions: write
 
     steps:
-      - uses: actions/checkout@v4
-
-      # ── 1. Actions permissions ─────────────────────────────────────────────
-      - name: Configure Actions permissions
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-        run: |
-          echo "→ Setting workflow permissions to read & write..."
-          gh api \
-            --method PUT \
-            "repos/$REPO/actions/permissions/workflow" \
-            --field default_workflow_permissions=write \
-            --field can_approve_pull_request_reviews=true \
-            --silent
-          echo "✓ Workflow permissions set"
-
-      # ── 2. Auto-merge & repo settings ─────────────────────────────────────
-      - name: Enable auto-merge and squash settings
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-        run: |
-          echo "→ Enabling auto-merge..."
-          gh api \
-            --method PATCH \
-            "repos/$REPO" \
-            --field allow_auto_merge=true \
-            --field allow_squash_merge=true \
-            --field allow_merge_commit=false \
-            --field allow_rebase_merge=false \
-            --field delete_branch_on_merge=true \
-            --silent
-          echo "✓ Auto-merge enabled (squash only, delete branch on merge)"
-
-      # ── 3. Labels ──────────────────────────────────────────────────────────
       - name: Create labels
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -95,127 +53,3 @@ jobs:
           create_label "skip-qa"        "2d3748" "Skip QA agent for this PR"
           create_label "skip-security"  "2d3748" "Skip security agent for this PR"
           echo "✓ Labels ready"
-
-      # ── 4. Branch protection ───────────────────────────────────────────────
-      # GITHUB_TOKEN cannot set branch protection rules — this requires
-      # admin:repo scope which only a PAT can provide. We try anyway in case
-      # a PAT is stored as FACTORY_SETUP_TOKEN, and gracefully skip if not.
-      - name: Configure branch protection (requires PAT)
-        env:
-          # Falls back to GITHUB_TOKEN — will likely fail for branch protection,
-          # that's expected and handled below.
-          GH_TOKEN: ${{ secrets.FACTORY_SETUP_TOKEN || secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          OWNER: ${{ github.repository_owner }}
-          REPO_NAME: ${{ github.event.repository.name }}
-        run: |
-          echo "→ Attempting branch protection setup..."
-
-          REPO_ID=$(gh api graphql \
-            -f query='query($owner:String!,$repo:String!){repository(owner:$owner,name:$repo){id}}' \
-            -f owner="$OWNER" \
-            -f repo="$REPO_NAME" \
-            --jq '.data.repository.id' 2>/dev/null || echo "")
-
-          if [[ -z "$REPO_ID" ]]; then
-            echo "::warning::Could not fetch repo ID — branch protection skipped"
-            echo "BRANCH_PROTECTION_DONE=false" >> "$GITHUB_ENV"
-            exit 0
-          fi
-
-          RESULT=$(gh api graphql -f query='
-            mutation($repoId:ID!) {
-              createBranchProtectionRule(input: {
-                repositoryId: $repoId
-                pattern: "main"
-                requiresApprovingReviews: true
-                requiredApprovingReviewCount: 1
-                requiresLinearHistory: true
-                allowsForcePushes: false
-                allowsDeletions: false
-              }) {
-                branchProtectionRule { id }
-              }
-            }
-          ' -f repoId="$REPO_ID" 2>&1) && {
-            echo "✓ Branch protection configured for main"
-            echo "BRANCH_PROTECTION_DONE=true" >> "$GITHUB_ENV"
-          } || {
-            echo "::warning::Branch protection failed (expected without PAT)"
-            echo "BRANCH_PROTECTION_DONE=false" >> "$GITHUB_ENV"
-          }
-
-      # ── 5. Copilot agent enable attempt ───────────────────────────────────
-      # The Copilot coding agent cannot be enabled via API — it requires the
-      # UI. We just verify the .github/agents/ files are present.
-      - name: Verify agent files
-        run: |
-          echo "→ Checking agent files..."
-          MISSING=()
-          for f in \
-            ".github/agents/planner.agent.md" \
-            ".github/agents/security.agent.md" \
-            ".github/agents/qa.agent.md" \
-            ".github/agents/code-quality.agent.md" \
-            ".github/copilot-instructions.md"; do
-            if [[ -f "$f" ]]; then
-              echo "  ✓ $f"
-            else
-              echo "  ✗ $f (missing)"
-              MISSING+=("$f")
-            fi
-          done
-
-          if [[ ${#MISSING[@]} -gt 0 ]]; then
-            echo "::warning::Some agent files are missing. Re-run the AI transformation prompt."
-          else
-            echo "✓ All agent files present"
-          fi
-
-      # ── 6. Create setup summary issue ─────────────────────────────────────
-      # Posts an issue in the repo summarising what was done and what still
-      # needs manual attention. Acts as a persistent checklist for the repo owner.
-      - name: Post setup summary issue
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          BRANCH_PROTECTION_DONE: ${{ env.BRANCH_PROTECTION_DONE }}
-        run: |
-          BRANCH_STATUS=""
-          if [[ "$BRANCH_PROTECTION_DONE" == "true" ]]; then
-            BRANCH_STATUS="- [x] Branch protection configured for \`main\`"
-          else
-            BRANCH_STATUS="- [ ] **Branch protection** — go to [Settings → Branches](https://github.com/$REPO/settings/branches) and add a rule for \`main\` (require 1 approval, linear history, no force push)"
-          fi
-
-          gh issue create \
-            --repo "$REPO" \
-            --title "🔧 Factory setup — complete these manual steps" \
-            --label "needs-human" \
-            --body "## Setup Status
-
-          The auto-setup workflow has configured your repo. A few things still need manual attention.
-
-          ### ✅ Done automatically
-          - [x] Actions permissions → read & write
-          - [x] Auto-merge enabled (squash only)
-          - [x] Delete branch on merge enabled
-          - [x] All labels created
-          - [x] Agent files verified
-
-          ### 🔧 Still required
-
-          $BRANCH_STATUS
-
-          - [ ] **Enable Copilot coding agent** — go to [Settings → Copilot](https://github.com/$REPO/settings/copilot) and enable the coding agent
-
-          - [ ] **Fill in \`config/project-config.yaml\`** — add your tech stack, framework, and conventions so Copilot has context before writing code
-
-          - [ ] **(If not org-wide)** Ask your org admin to enable the Copilot coding agent policy at [org level](https://github.com/organizations/${{ github.repository_owner }}/settings/copilot/policies)
-
-          ---
-
-          Once these are done, close this issue and create your first bootstrap issue to start building.
-
-          > **To start:** create an issue, describe your project, apply the \`bootstrap\` label."
-          echo "✓ Setup summary issue created"
