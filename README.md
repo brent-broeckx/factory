@@ -1,41 +1,41 @@
-# Software Factory
+﻿# Software Factory
 
 > An autonomous, AI-driven software development pipeline that lives entirely inside
-> a GitHub repository. Describe what you want to build — the AI designs, implements,
+> a GitHub repository. Describe what you want to build -- Copilot designs, implements,
 > reviews, and ships it.
+
+> **Requirements:** GitHub Copilot Enterprise or Copilot Business with the coding agent
+> enabled by your org admin. See [SETUP.md](SETUP.md) for org admin instructions.
 
 ---
 
 ## What Is This?
 
 This is a **GitHub repository template**. When you create a repository from it, you
-get a complete autonomous development system powered by AI agents and GitHub Actions.
+get a complete autonomous development system powered by GitHub Copilot and GitHub Actions.
 
-You write issues. The AI writes code.
+You write issues. Copilot writes code.
 
 ```
 You: "Build me a task management REST API with JWT auth and PostgreSQL"
-      │
-      ▼
-🧠 Planner Agent  →  Generates architecture + 12 GitHub issues
-      │
-      ▼
+      |
+      v
+Planner Agent  ->  Generates architecture + 12 GitHub issues
+      |
+      v
 You:  Review issues, apply 'ready' label to approved ones
-      │
-      ▼
-🛠️ Developer Agent  →  Writes code, creates branches, opens PRs
-      │
-      ▼
-🔍 Reviewer + 🧪 QA + 🔒 Security  →  Automated review on every PR
-      │
-      ▼
-🔄 Developer Agent  →  Fixes review comments automatically (up to 3 attempts)
-      │
-      ▼
-✅ Auto-merge when all checks pass
-      │
-      ▼
-🚀 Manual release when you're ready
+      |
+      v
+Copilot coding agent  ->  Writes code, creates branches, opens PRs
+      |
+      v
+Code quality + QA + Security  ->  Automated review on every PR
+      |
+      v
+Auto-merge when all checks pass
+      |
+      v
+Manual release when you're ready
 ```
 
 ---
@@ -60,39 +60,35 @@ The system is **human-gated at every critical decision**:
 
 ### 1. Create your repository
 
-Click **"Use this template"** → **"Create a new repository"** at the top of this page.
+Click **"Use this template"** -> **"Create a new repository"** at the top of this page.
 
-### 2. Run Initial Setup
+### 2. Enable Copilot coding agent
 
-Go to **Actions** → **🔧 Initial Setup** → **Run workflow**.
+Go to your repo **Settings** -> **Copilot** -> enable the coding agent.
+(Your org admin must first enable this at the org level -- see [SETUP.md](SETUP.md).)
 
-This creates all required labels and shows you the configuration checklist.
+### 3. Run Initial Setup
 
-### 3. Configure your API key
+Go to **Actions** -> **Initial Setup** -> **Run workflow**.
 
-Go to **Settings** → **Secrets and variables** → **Actions** → **New repository secret**:
-
-```
-Name:  AI_API_KEY
-Value: sk-... (your OpenAI API key, or any compatible provider)
-```
+This creates all required labels.
 
 ### 4. Set workflow permissions
 
-Go to **Settings** → **Actions** → **General** → **Workflow permissions**:
+Go to **Settings** -> **Actions** -> **General** -> **Workflow permissions**:
 - Select: **"Read and write permissions"**
 - Check: **"Allow GitHub Actions to create and approve pull requests"**
 
 ### 5. Configure branch protection (recommended)
 
-Go to **Settings** → **Branches** → Add a rule for `main`:
-- ✅ Require status checks: `AI Code Review`, `AI QA & Test Analysis`, `AI Security Scan`
-- ✅ Allow auto-merge (also enable in **Settings → General**)
+Go to **Settings** -> **Branches** -> Add a rule for `main`:
+- Require status checks to pass before merging
+- Enable auto-merge (also enable in **Settings -> General**)
 
 ### 6. Configure your project
 
 Edit [`config/project-config.yaml`](config/project-config.yaml) with your project
-details. This gives the Developer Agent context about your tech stack.
+details. Copilot reads this file for context about your tech stack and conventions.
 
 ---
 
@@ -102,11 +98,11 @@ For large projects or multi-feature initiatives:
 
 1. Create an issue using the **Bootstrap** template
 2. Describe your application in detail
-3. Save — **nothing happens yet**
+3. Save -- **nothing happens yet**
 4. Apply the **`bootstrap`** label
-5. The Planner Agent generates architecture + sub-issues (labeled `draft`)
+5. Copilot's planner agent generates architecture + sub-issues (labeled `draft`)
 6. Review each draft issue
-7. Apply **`ready`** to approved issues → development begins
+7. Apply **`ready`** to approved issues -> development begins
 
 ## The Direct Workflow
 
@@ -114,7 +110,7 @@ For individual, well-defined tasks:
 
 1. Create a new issue (Feature or Bug template)
 2. The system automatically labels it `ready`
-3. The Developer Agent picks it up immediately
+3. Copilot picks it up immediately
 
 ---
 
@@ -122,13 +118,15 @@ For individual, well-defined tasks:
 
 | Agent | Trigger | What it does |
 |-------|---------|-------------|
-| 🧠 **Planner** | `bootstrap` label on issue | Decomposes request into architecture + sub-issues |
-| 🛠️ **Developer** | `ready` label on issue | Implements the feature, creates branch + PR |
-| 🔄 **Developer (fix)** | Reviewer requests changes | Fixes review comments, pushes to same branch |
-| 🔍 **Reviewer** | PR opened/updated | Reviews code quality, architecture, correctness |
-| 🧪 **QA** | PR opened/updated | Runs tests, analyses coverage gaps |
-| 🔒 **Security** | PR opened/updated | Scans for OWASP issues, secrets, vulnerabilities |
-| 🚀 **Release** | Manual workflow_dispatch | Builds, tags, and releases the project |
+| **Planner** | `bootstrap` label on issue | Decomposes request into architecture + sub-issues |
+| **Developer** | `ready` label on issue | Implements the feature, creates branch + PR |
+| **Code Quality** | PR opened/updated | Reviews readability, architecture, correctness |
+| **QA** | PR opened/updated | Analyses coverage gaps, requirement correctness |
+| **Security** | PR opened/updated | Scans for OWASP issues, secrets, vulnerabilities |
+| **Release** | Manual workflow_dispatch | Builds, tags, and releases the project |
+
+Review agent definitions live in [`.github/agents/`](.github/agents/) -- edit them to
+customise review behaviour for your project.
 
 ---
 
@@ -136,47 +134,24 @@ For individual, well-defined tasks:
 
 | Label | Colour | Meaning |
 |-------|--------|---------|
-| `bootstrap` | 🔴 Red | Triggers the Planner Agent |
-| `draft` | ⬜ Grey | AI-generated, awaiting human review |
-| `ready` | 🟢 Green | Approved for AI development |
-| `in-progress` | 🟡 Amber | Developer Agent is implementing |
-| `review` | 🔵 Blue | PR open, under review |
-| `done` | 🟣 Purple | Merged and complete |
-| `ai-generated` | 🟣 Violet | Created by an AI agent |
-| `needs-human` | 🔴 Red | Fix loop exhausted — human required |
-| `skip-ai-review` | ⬛ Slate | Skip reviewer for this PR |
-| `skip-qa` | ⬛ Slate | Skip QA for this PR |
-| `skip-security` | ⬛ Slate | Skip security scan for this PR |
+| `bootstrap` | Red | Triggers the Planner Agent |
+| `draft` | Grey | AI-generated, awaiting human review |
+| `ready` | Green | Approved for AI development |
+| `in-progress` | Amber | Copilot is implementing |
+| `review` | Blue | PR open, under review |
+| `done` | Purple | Merged and complete |
+| `ai-generated` | Violet | Created by an AI agent |
+| `needs-human` | Red | Requires human intervention |
+| `skip-ai-review` | Slate | Skip code quality review for this PR |
+| `skip-qa` | Slate | Skip QA for this PR |
+| `skip-security` | Slate | Skip security scan for this PR |
 
 ---
 
-## Cost Control
+## Cost
 
-The system is designed to minimise unnecessary AI API calls:
-
-- **Nothing runs until you say so** — no idle polling, no background loops
-- **Draft buffer** — bootstrap issues stay `draft` with zero cost until you approve
-- **Iteration cap** — `MAX_FIX_ITERATIONS` (default: 3) stops infinite fix loops
-- **Token limits** — configurable per-call token caps via `AI_MAX_TOKENS`
-- **Cancellation** — reviewer/QA/security cancel previous runs when PR updates
-- **Skip labels** — bypass any agent on a per-PR basis
-
-**Estimated cost per issue (gpt-4o):** ~$0.10–0.25 depending on complexity.
-
----
-
-## AI Provider Compatibility
-
-Works with any OpenAI-compatible API:
-
-| Provider | Set `AI_BASE_URL` to |
-|----------|---------------------|
-| **OpenAI** (default) | `https://api.openai.com/v1` |
-| **Azure OpenAI** | `https://<resource>.openai.azure.com/openai/deployments/<deploy>` |
-| **Together AI** | `https://api.together.xyz/v1` |
-| **Ollama** (local) | `http://localhost:11434/v1` |
-
-Change the model via the `AI_MODEL` repository variable.
+No API keys or external secrets are required. All AI usage is covered by your
+**GitHub Copilot Enterprise subscription** (Actions minutes + Copilot AI credits).
 
 ---
 
@@ -184,6 +159,7 @@ Change the model via the `AI_MODEL` repository variable.
 
 | Document | Description |
 |----------|-------------|
+| [SETUP.md](SETUP.md) | Org admin setup guide |
 | [docs/GUIDANCE.md](docs/GUIDANCE.md) | Complete setup and operations guide |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design and agent architecture |
 | [docs/WORKFLOW.md](docs/WORKFLOW.md) | End-to-end workflow walkthrough with example |
@@ -194,19 +170,14 @@ Change the model via the `AI_MODEL` repository variable.
 
 ```
 .github/
-  workflows/         8 GitHub Actions workflows
+  workflows/         5 GitHub Actions workflows
+  agents/            4 Copilot agent definition files
   ISSUE_TEMPLATE/    Bootstrap, Feature, Bug templates
+  copilot-instructions.md
   pull_request_template.md
 
-agents/              Python agent scripts (one per agent)
-  planner/
-  developer/
-  reviewer/
-  qa/
-  security/
-
-prompts/             System prompts loaded by each agent
-config/              Agent and project configuration
+prompts/             Migration notes (content moved to .github/agents/)
+config/              Project configuration (read by Copilot for context)
 docs/                GUIDANCE, ARCHITECTURE, WORKFLOW
 templates/           Reference templates for issues and PRs
 ```
@@ -215,4 +186,4 @@ templates/           Reference templates for issues and PRs
 
 ## License
 
-MIT — use this template freely in your own projects.
+MIT -- use this template freely in your own projects.

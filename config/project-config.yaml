@@ -1,49 +1,32 @@
 # Project Configuration
 # ======================
-# Describes your project to the AI Developer Agent.
-# The developer agent reads this file as context when implementing issues.
-# Fill this in after creating your repository from the template.
+# Read by Copilot agents for context when implementing issues.
+# Fill this in when using the template for a real project.
+# No AI provider configuration lives here — Copilot is used natively.
 
 project:
-  # Short description of what this project is
-  name: "My Project"
-  description: "Describe your project here. This is read by the AI Developer Agent."
+  name: ""
+  description: ""
 
-  # Primary programming language(s)
-  # Examples: TypeScript, Python, C#, Go, Java, Ruby
-  language: ""
+tech_stack:
+  language: ""           # e.g. TypeScript, Python, Go, C#
+  framework: ""          # e.g. Next.js, FastAPI, ASP.NET Core, Gin
+  database: ""           # e.g. PostgreSQL, MongoDB, none
+  runtime: ""            # e.g. Node.js 20, Python 3.12, .NET 8
+  package_manager: ""    # e.g. npm, pnpm, pip, go mod
 
-  # Framework(s) in use
-  # Examples: Express, FastAPI, ASP.NET Core, Next.js, Django
-  framework: ""
-
-  # Detected automatically by the release workflow, but set here for dev agent context
-  # Options: nodejs, dotnet, python, docker, static, unknown
-  type: ""
-
-code_style:
-  # Point the developer agent to style rules
-  # Examples: eslint, prettier, black, ruff, dotnet format
-  formatter: ""
-  linter: ""
-
-  # Key conventions to follow (add your own)
-  conventions:
-    - "Use async/await, not callbacks"
-    - "All functions must have explicit return types"
-    - "Tests use describe/it blocks"
-    # - "Follow repository naming conventions in CONTRIBUTING.md"
+conventions:
+  branch_prefix: "feat"
+  test_framework: ""     # e.g. Jest, Pytest, xUnit, Vitest
+  lint_tool: ""          # e.g. ESLint, Ruff, golangci-lint
+  style_guide: ""        # e.g. Airbnb, PEP8, standard Go
 
 testing:
-  # Test framework(s) in use
-  # Examples: Jest, Pytest, xUnit, RSpec, Vitest
-  framework: ""
-
   # Test file location pattern
   # Examples: "**/*.test.ts", "tests/", "spec/"
   pattern: ""
 
-  # Minimum coverage threshold (developer agent will aim for this)
+  # Minimum coverage threshold (Copilot will aim for this)
   min_coverage_percent: 80
 
 structure:
@@ -53,23 +36,18 @@ structure:
   # Root directory for tests
   test_dir: "tests"
 
-  # Any directories the developer agent should NOT modify
+  # Directories Copilot should NOT modify
   protected_paths:
     - ".github/"
-    - "agents/"
     - "prompts/"
     - "config/"
     - "docs/"
 
 deployment:
-  # Set to true after configuring .github/deploy.sh
-  enabled: false
+  target: ""             # e.g. Vercel, AWS Lambda, Docker, GKE
+  registry: ""           # e.g. ghcr.io, ECR (if containerized)
 
   # Available environments (used in release workflow)
   environments:
     - name: production
     - name: staging
-
-  # Custom deployment notes for the AI developer agent
-  # e.g. "Deploy by pushing to the 'deploy' branch"
-  notes: ""
