@@ -52,9 +52,6 @@
 
 name: "🧠 Planner — Decompose bootstrap issue into sub-issues"
 on:
-  issues:
-    types:
-    - labeled
   workflow_dispatch:
     inputs:
       aw_context:
