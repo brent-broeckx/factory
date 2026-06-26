@@ -60,3 +60,4 @@ Edit `config/project-config.yaml` and fill in your tech stack, framework, and co
 
 Create an issue, describe what you want to build, and apply the `bootstrap` label.
 
+

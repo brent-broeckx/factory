@@ -80,16 +80,34 @@ PRs must be opened as **drafts** until all tests pass in CI.
 
 ---
 
+## Release workflow
+
+Every repository needs a CI/release workflow appropriate for its tech stack and deployment target.
+
+- **When starting work on a new project:** check whether `.github/workflows/ci.yml` (or equivalent) exists. If not, create one as part of your first PR. Base it on the `tech_stack` and `deployment.target` fields in `config/project-config.yaml`.
+- **When the tech stack or deployment target changes:** update the CI/release workflow in the same PR that introduces the change.
+- The release workflow must at minimum: install dependencies, run tests, build the artefact, and deploy/publish to the target specified in config.
+- Do not hardcode environment-specific values — use GitHub Actions environments and secrets.
+
+---
+
 ## Review agents
 
-When Copilot opens a PR, three review agents will run automatically via
-`.github/agents/`:
+When a PR is marked ready for review, three parallel gh-aw agents run automatically,
+each posting inline comments (up to 20) and a summary verdict on the PR:
 
-| Agent | File | Focus |
-|-------|------|-------|
-| Security | `.github/agents/security.agent.md` | OWASP Top 10, secrets, injection |
-| QA | `.github/agents/qa.agent.md` | Test coverage, correctness vs requirements |
-| Code quality | `.github/agents/code-quality.agent.md` | Readability, architecture, docs |
+| Agent | Workflow | Focus |
+|-------|----------|-------|
+| Security | `security-review.lock.yml` | OWASP Top 10, secrets, injection |
+| QA | `qa-review.lock.yml` | Test coverage, correctness vs requirements |
+| Code quality | `code-quality-review.lock.yml` | Readability, architecture, docs |
+
+Each agent adds one of these labels to the PR:
+- `*-passed` — no issues found
+- `*-needs-fix` — warnings that should be addressed
+- `*-blocked` + `blocked` — critical issues that must be fixed before merge
+
+The review criteria live in `.github/workflows/security-review.md`, `qa-review.md`, and `code-quality-review.md` — read them before opening a PR.
 
 **Proactively avoid common findings:**
 - No hardcoded secrets or credentials (security)
@@ -109,12 +127,16 @@ The workflow uses these labels — do not remove or rename them:
 |-------|---------|
 | `bootstrap` | Human trigger: start the Planner agent |
 | `draft` | AI-generated issue awaiting human review |
-| `ready` | Human trigger: start the Developer agent |
+| `ready` | Human signal: issue approved, assign `copilot-swe-agent[bot]` manually to start |
 | `in-progress` | Copilot is implementing this issue |
 | `review` | PR is open and under agent review |
 | `done` | Issue is complete and merged |
 | `ai-generated` | Created by a Copilot agent |
 | `needs-human` | Requires human intervention |
+| `security-passed` / `security-needs-fix` / `security-blocked` | Security review result |
+| `qa-passed` / `qa-needs-fix` / `qa-blocked` | QA review result |
+| `quality-passed` / `quality-needs-fix` / `quality-blocked` | Code quality review result |
+| `blocked` | PR has critical issues — do not merge |
 
 ---
 
@@ -133,11 +155,9 @@ to an issue. You implement the feature described in the issue, create a branch,
 write code, and open a PR. You do **not** create other issues or call the GitHub API.
 You read `.github/copilot-instructions.md` (this file) for project conventions.
 
-**Copilot code review** — triggered automatically on every PR. When you are requested
-as a reviewer, you read `.github/agents/*.agent.md` files as review personas:
-`security.agent.md`, `qa.agent.md`, and `code-quality.agent.md`. These files give
-you a specific review focus for each dimension. This is separate from your role as
-the coding agent.
+**Copilot code review** — triggered when a human requests Copilot as a reviewer on a PR. When requested, Copilot reads `.github/agents/*.agent.md` files as review personas: `security.agent.md`, `qa.agent.md`, and `code-quality.agent.md`. This is separate from your role as the coding agent.
+
+**gh-aw review agents** — three parallel agentic workflows that fire automatically when a PR moves from draft to ready for review. Each posts inline PR comments and a verdict label. They trigger directly via `on: pull_request: types: [ready_for_review]` in their own frontmatter: `security-review.md`, `qa-review.md`, and `code-quality-review.md`.
 
 ---
 
