@@ -105,10 +105,9 @@ Design a full architecture for the project. Cover every area needed:
 
 ## Step 4 — Create sub-issues
 
-Create between 5 and 20 sub-issues. Emit one `create_issue` safe output per issue.
+Create a maximum of 10 sub-issues. Emit one `create_issue` safe output per issue.
 
 **Rules:**
-- Never create fewer than 5 issues.
 - Each issue must be independently implementable with no hidden upstream dependencies.
 - Prefer small, focused issues over large monolithic ones.
 - The first issue must always be scaffolding or repository setup — it unblocks everything else.
