@@ -9,6 +9,17 @@ These instructions apply to every task Copilot performs in this repository.
 
 ---
 
+## Skills
+
+Always load these skills from `.github/skills/` at the start of every task:
+
+| Skill | File | When |
+|-------|------|------|
+| `cgk-coding-conventions` | `.github/skills/cgk-coding-conventions/SKILL.md` | **Always** — before writing, editing, or planning any code |
+| `cgk-code-quality-review` | `.github/skills/cgk-code-quality-review/SKILL.md` | Before opening a PR — run a self-review pass on your own changes before marking the PR ready for review |
+
+---
+
 ## Before writing any code
 
 1. **Read `config/project-config.yaml`** — it contains the project's language,
@@ -91,31 +102,28 @@ Every repository needs a CI/release workflow appropriate for its tech stack and 
 
 ---
 
-## Review agents
+## Review agent
 
-When a PR is marked ready for review, three parallel gh-aw agents run automatically,
-each posting inline comments (up to 20) and a summary verdict on the PR:
+When you finish a PR and remove the [WIP] or [DRAFT] prefix from the title, please mark the pull request as **ready for review**. This triggers the `gh-aw` audit agent to run automatically.
 
-| Agent | Workflow | Focus |
-|-------|----------|-------|
-| Security | `security-review.lock.yml` | OWASP Top 10, secrets, injection |
-| QA | `qa-review.lock.yml` | Test coverage, correctness vs requirements |
-| Code quality | `code-quality-review.lock.yml` | Readability, architecture, docs |
+When a PR is marked ready for review, a gh-aw audit agent runs automatically.
+It posts up to 20 inline comments and a full audit summary covering security, code quality, maintainability, test coverage, and correctness against the linked issue requirements.
 
-Each agent adds one of these labels to the PR:
-- `*-passed` — no issues found
-- `*-needs-fix` — warnings that should be addressed
-- `*-blocked` + `blocked` — critical issues that must be fixed before merge
+The agent adds one of these labels:
+- `audit-passed` — no issues found
+- `audit-needs-fix` — warnings that should be addressed
+- `audit-blocked` + `blocked` — critical issues that must be fixed before merge
 
-The review criteria live in `.github/workflows/security-review.md`, `qa-review.md`, and `code-quality-review.md` — read them before opening a PR.
+The audit criteria live in `.github/workflows/pr-audit.md` — read it before opening a PR.
 
 **Proactively avoid common findings:**
-- No hardcoded secrets or credentials (security)
-- No SQL string concatenation (security)
-- No missing error handling (security + quality)
-- No new public functions without tests (QA)
-- No functions without docstrings/JSDoc when the rest of the file has them (quality)
-- No stack traces or internal error details returned to the client (security + quality)
+- No hardcoded secrets, credentials, or API keys
+- No SQL string concatenation or command injection patterns
+- No missing error handling — never swallow exceptions silently
+- No new public functions without tests
+- No functions without docstrings/JSDoc when the rest of the file has them
+- No stack traces or internal error details returned to the client
+- No magic numbers, deep nesting (3+ levels), or duplicated logic blocks
 
 ---
 
@@ -133,10 +141,10 @@ The workflow uses these labels — do not remove or rename them:
 | `done` | Issue is complete and merged |
 | `ai-generated` | Created by a Copilot agent |
 | `needs-human` | Requires human intervention |
-| `security-passed` / `security-needs-fix` / `security-blocked` | Security review result |
-| `qa-passed` / `qa-needs-fix` / `qa-blocked` | QA review result |
-| `quality-passed` / `quality-needs-fix` / `quality-blocked` | Code quality review result |
-| `blocked` | PR has critical issues — do not merge |
+| `audit-passed` | PR audit found no issues |
+| `audit-needs-fix` | PR audit found warnings to address |
+| `audit-blocked` | PR audit found critical issues — must fix before merge |
+| `blocked` | PR blocked — critical issues must be resolved |
 
 ---
 
@@ -155,9 +163,7 @@ to an issue. You implement the feature described in the issue, create a branch,
 write code, and open a PR. You do **not** create other issues or call the GitHub API.
 You read `.github/copilot-instructions.md` (this file) for project conventions.
 
-**Copilot code review** — triggered when a human requests Copilot as a reviewer on a PR. When requested, Copilot reads `.github/agents/*.agent.md` files as review personas: `security.agent.md`, `qa.agent.md`, and `code-quality.agent.md`. This is separate from your role as the coding agent.
-
-**gh-aw review agents** — three parallel agentic workflows that fire automatically when a PR moves from draft to ready for review. Each posts inline PR comments and a verdict label. They trigger directly via `on: pull_request: types: [ready_for_review]` in their own frontmatter: `security-review.md`, `qa-review.md`, and `code-quality-review.md`.
+**gh-aw review agent** — a single agentic workflow (`pr-audit.md`) that fires automatically when a PR moves from draft to ready for review. It posts inline PR comments and a verdict label covering security, code quality, maintainability, and test coverage in one pass.
 
 ---
 

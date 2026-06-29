@@ -1,0 +1,6 @@
+# Managed by AI Companion extension.
+# Records workspace-scope AI asset dependencies in APM format.
+dependencies:
+  apm:
+    - Cegeka-Application-Services/ai-assets/skills/cgk-code-quality-review#CGK Code Quality Review@v1.0.0
+    - Cegeka-Application-Services/ai-assets/skills/cgk-coding-conventions#CGK Coding Conventions@v1.0.1
