@@ -6,7 +6,7 @@ After creating a repo from this template, complete these steps once.
 
 ## 1. Run the setup workflow
 
-Go to **[Actions → Auto Setup → Run workflow](../../actions/workflows/setup.yml)** and run it.
+Go to **[Actions → Initial Setup → Run workflow](../../actions/workflows/setup.yml)** and run it.
 
 This creates all labels required by the pipeline.
 
@@ -58,6 +58,7 @@ Edit `config/project-config.yaml` and fill in your tech stack, framework, and co
 
 ## Start building
 
-Create an issue, describe what you want to build, and apply the `bootstrap` label.
+Create an issue, describe what you want to build, and apply the `bootstrap` label to kick off the planner agent.
 
+Once issues are generated and you apply `ready` to one, assign **`copilot-swe-agent[bot]`** to it in the GitHub UI — that starts the developer agent.
 
